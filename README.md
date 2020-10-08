@@ -1,6 +1,9 @@
 # Instagram Giveaway Picker Tool
 
-This program takes some inputs from a config file and starts analysing an instagram post to pick winner(s) from comments who are qualified based on specific conditions.
+This program takes some inputs from a config file and starts analysing an instagram post to pick winner(s) from comments who are qualified based on the following conditions:
+  - The candidate has to tag minimum 5 persons in the comment section of a specified post.
+  - The candidate has to press the like button of the post.
+  - The candidate must have followed the Instagram page of the owner.
 
 ## Getting Started
 
