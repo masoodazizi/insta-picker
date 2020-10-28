@@ -7,14 +7,20 @@ username="yeganedia.bot"
 profile_name = "insta_profile_name"
 post_id = "insta_post_id"
 
-min_tags = 5
+min_tags = 3
 tz_country = "Iran"
-total_winner = 2
+total_winner = 1
+
+condition_is_follower = False
+condition_liked_post  = True
+
+# Exclude users such as owners
+exclude_list = []
 
 deadline_dict = {
     'year' : 2020,
-    'month' : 9,
-    'day' : 29,
+    'month' : 10,
+    'day' : 28,
     'hour' : 6,
     'minute' : 0
 }

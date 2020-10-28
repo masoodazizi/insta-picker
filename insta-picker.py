@@ -7,6 +7,8 @@ import random
 from config import *
 from text_vars import *
 
+debug_mode = False
+
 class Commenter:
     def __init__(self, name, min_tags):
         self.name = name
@@ -17,6 +19,7 @@ class Commenter:
         self.invalid_date = 'N/A'
         self.is_follower = True
         self.is_liker = True
+        self.has_min_tags = False
         self.min_tags = min_tags
         self.date = 'N/A'
         self.valid = False
@@ -36,7 +39,25 @@ class Commenter:
                                 self.date = comment_date
                         if self.tags_count >= self.min_tags:
                             self.valid = True
+                            self.has_min_tags = True
 
+def debug(status='d', msg=""):
+    if debug_mode:
+        now = datetime.datetime.now()
+        dt_str = now.strftime("%d/%m/%Y %H:%M:%S")
+        debug_str = "[{}] ".format(dt_str)
+        if status.lower() == 'd':
+            debug_str += "DEBUG: "
+        elif status.lower() == 'i':
+            debug_str += "INFO:  "
+        elif status.lower() == 'w':
+            debug_str += "WARN:  "
+        elif status.lower() == 'e':
+            debug_str += "ERROR: "
+        else:
+            debug_str += "MESG:  "
+        debug_str += msg
+        print(debug_str)
 
 def utc_to_custom_tz(utc_dt, tz_name):
     user_tz = pytz.timezone(tz_name)
@@ -54,29 +75,43 @@ def login_insta(username="not_defined", password="not_defined"):
         if password == "not_defined":
             L.interactive_login(username)
         else:
-            L.login(username, tmp_pass)
+            L.login(username, password)
+    if debug_mode:
+        debug(msg="The user '{}' is logged in.".format(username))
     return L
 
 def fetch_post(L, post_id):
+    debug(msg="Fetching the post id '{}'".format(post_id))
     post = instaloader.Post.from_shortcode(L.context, post_id)
     return post
 
+def get_followers_count(L, profile_name):
+    # debug(msg="Fetching the number of followers of the user '{}'".format(profile_name))
+    profile = instaloader.Profile.from_username(L.context, profile_name)
+    return profile.followers
+
 def get_followers_list(L, profile_name):
+    debug(msg="Fetching the follower list of the user '{}'".format(profile_name))
     followers_list = []
     profile = instaloader.Profile.from_username(L.context, profile_name)
-    for follower in profile.get_followers():
+    followers = profile.get_followers()
+    for follower in followers:
         followers_list.append(follower.username)
     return followers_list
 
 def get_likes_list(post):
+    debug(msg="Listing the users clicked LIKE for the post")
     likes_list = []
-    for like in post.get_likes():
+    likes = post.get_likes()
+    for like in likes:
         likes_list.append(like.username)
     return likes_list
 
 def process_comments(post, deadline, tz_name):
+    debug(msg="Proccessing the comments of the post")
     commenter = {}
-    for comment in post.get_comments():
+    comments = post.get_comments()
+    for comment in comments:
         comment_owner = comment.owner.username
         comment_date = utc_to_custom_tz(comment.created_at_utc, tz_name)
         comment_text = comment.text
@@ -98,29 +133,62 @@ def verify_followers(commenters_list,followers_list):
             object.is_follower = False
 
 def list_invalid_commenters(commenters_list):
+    invalid_count = 1
+    print("*** List of invalid users ***")
     for commenter, object in commenters_list.items():
         if not object.valid:
-            print("The comment of user {} is not valid, because:".format(commenter))
+            print("{}. User '{}' :".format(invalid_count, commenter))
             if (object.invalid_date != 'N/A'):
-                print("- The comment was entered on {} after the deadline.".format(object.invalid_date))
+                print("  - Comment after the deadline (on {})".format(object.invalid_date))
             if (not object.is_liker):
-                print("- The user has not pressed the like button")
+                print("  - NOT pressed the LIKE button")
             if (not object.is_follower):
-                print("- The user has not followed the profile {}".format(profile_name))
+                print("  - NOT following the profile {}".format(profile_name))
+            if (not object.has_min_tags):
+                print("  - Not sufficient tags (tagged {} users < min tags {})".format(object.tags_count, object.min_tags))
+            invalid_count += 1
+
+def list_valid_commenters(L, commenters_list):
+    valid_count = 1
+    print("*** List of valid users ***")
+    for commenter, object in commenters_list.items():
+        if object.valid:
+            print("{}. User '{}' tagged {} users:".format(valid_count, commenter, object.tags_count))
+            # for id in object.tags_ids:
+            #     print("  # {}".format(id))
+            #     print("  # {} - {} followers".format(id, get_followers_count(L, id[1:])))
+            valid_count += 1
+
+def init_candidates(commenters_list):
+    candidates_list = []
+    tags_count_list = []
+    weights_list = []
+    for commenter, object in commenters_list.items():
+        if object.valid:
+            if commenter not in exclude_list:
+                candidates_list.append(commenter)
+                tags_count_list.append(int(object.tags_count))
+            else:
+                debug('d',"User '{}' skipped due to exclude_list".format(commenter))
+    tags_sum = sum(tags_count_list)
+    for tags_count in tags_count_list:
+        weights_list.append(tags_count/tags_sum)
+    return candidates_list, weights_list, tags_count_list
 
 def init_text():
     print(init_text_1)
     input("->  Press Enter to start the program and randomly select the winner(s)! READY ?????")
     print(init_text_2)
 
-def winner_picker(commenters_list, total_winner):
-    winner_count = 1
-    while winner_count <= total_winner:
-        winner = random.choice(list(commenters_list.keys()))
-        if not commenters_list[winner].valid:
-            print("\n\n\n\n\n->  The selected winner is NOT qualified. NEXT CHANCE...")
-            pass
-        else:
+def winner_picker(candidates_list, weights_list, tags_count_list, total_winner):
+
+    winners_list = random.choices(candidates_list, weights=weights_list, k=total_winner)
+
+    for winner_cnt, winner in enumerate(winners_list):
+        winner_count = winner_cnt + 1
+        index = candidates_list.index(winner)
+        winner_tags_count = tags_count_list[index]
+        if not debug_mode:
             print("\n\n\n\n\n")
             print("  THE ----------  {}  ---------- WINNER  ".format(winner_count).center(100,"="))
             time.sleep(5)
@@ -131,14 +199,17 @@ def winner_picker(commenters_list, total_winner):
             print("*"*100)
             print("*"*100)
             print(str(winner_count)*100)
-            winner_count += 1
-    time.sleep(5)
-    print("\n\n\n\n\n")
-    print("  CONGRATULATIONS  ".center(100,"*"))
-    print("\n\n\n\n\n")
-    print("- This service is provided by =====>  YEGANEDIA  <=====")
-    print("- For more information please visit:  www.yeganedia.com")
-    print("-------------------------------------------------------")
+        else:
+            debug('i', "Winner {} is '{}' with {} number of tags.".format(winner_count, winner, winner_tags_count))
+
+    if not debug_mode:
+        time.sleep(5)
+        print("\n\n\n\n\n")
+        print("  CONGRATULATIONS  ".center(100,"*"))
+        print("\n\n\n\n\n")
+        print("- This service is provided by =====>  YEGANEDIA  <=====")
+        print("- For more information please visit:  www.yeganedia.com")
+        print("-------------------------------------------------------")
 
 
 def main():
@@ -149,23 +220,28 @@ def main():
     ### username/password or anonymous
     login = login_insta(username)
 
-    init_text()
+    if not debug_mode:
+        init_text()
 
     post = fetch_post(login, post_id)
 
-    followers_list = get_followers_list(login, profile_name)
-
-    liker_list = get_likes_list(post)
-
     commenters_list = process_comments(post, deadline, tz_name)
 
-    verify_likers(commenters_list,liker_list)
+    if condition_is_follower:
+        followers_list = get_followers_list(login, profile_name)
+        verify_followers(commenters_list,followers_list)
 
-    verify_followers(commenters_list,followers_list)
+    if condition_liked_post:
+        liker_list = get_likes_list(post)
+        verify_likers(commenters_list,liker_list)
 
-    winner_picker(commenters_list, total_winner)
+    candidates_list, weights_list, tags_count_list = init_candidates(commenters_list)
+
+    winner_picker(candidates_list, weights_list, tags_count_list, total_winner)
 
     # list_invalid_commenters(commenters_list)
+
+    # list_valid_commenters(login, commenters_list)
 
 if __name__ == "__main__":
     main()
