@@ -8,6 +8,7 @@ profile_name = "insta_profile_name"
 post_id = "insta_post_id"
 
 min_tags = 3
+weighted_list_enable = False
 tz_country = "Iran"
 total_winner = 1
 

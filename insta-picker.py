@@ -24,22 +24,28 @@ class Commenter:
         self.date = 'N/A'
         self.valid = False
     def process_tags(self, text, comment_date, deadline):
-        for item in text.split():
-            if item.startswith('@'):
-                if item not in self.tags_ids:
-                    if (comment_date > deadline):
-                        self.invalid_tags_count += 1
-                        self.invalid_tags.append(item)
-                        self.invalid_date = comment_date
-                    else:
-                        self.tags_ids.append(item)
-                        self.tags_count += 1
-                        if self.date != 'N/A':
-                            if self.date < comment_date:
-                                self.date = comment_date
-                        if self.tags_count >= self.min_tags:
-                            self.valid = True
-                            self.has_min_tags = True
+        if min_tags != 0:
+            for item in text.split():
+                if item.startswith('@'):
+                    if item not in self.tags_ids:
+                        self.verify_date(item, comment_date, deadline)
+        else:
+            self.verify_date(text, comment_date, deadline)
+
+    def verify_date(self, item, comment_date, deadline):
+        if (comment_date > deadline):
+            self.invalid_tags_count += 1
+            self.invalid_tags.append(item)
+            self.invalid_date = comment_date
+        else:
+            self.tags_ids.append(item)
+            self.tags_count += 1
+            if self.date != 'N/A':
+                if self.date < comment_date:
+                    self.date = comment_date
+            if self.tags_count >= self.min_tags:
+                self.valid = True
+                self.has_min_tags = True
 
 def debug(status='d', msg=""):
     if debug_mode:
@@ -192,7 +198,10 @@ def init_text():
 
 def winner_picker(candidates_list, weights_list, tags_count_list, total_winner):
 
-    winners_list = random.choices(candidates_list, weights=weights_list, k=total_winner)
+    if weighted_list_enable:
+        winners_list = random.choices(candidates_list, weights=weights_list, k=total_winner)
+    else:
+        winners_list = random.choices(candidates_list, weights=None, k=total_winner)
 
     for winner_cnt, winner in enumerate(winners_list):
         winner_count = winner_cnt + 1
@@ -207,7 +216,10 @@ def winner_picker(candidates_list, weights_list, tags_count_list, total_winner):
             print("*"*100)
             print("||||||||||  {}  ||||||||||".format(winner).center(100,"*"))
             print("*"*100)
-            print("((((( Tagged {} Persons )))))".format(winner_tags_count).center(100,"*"))
+            if min_tags == 0 or not weighted_list_enable:
+                print("*"*100)
+            else:
+                print("((((( Tagged {} Persons )))))".format(winner_tags_count).center(100,"*"))
             print(str(winner_count)*100)
         else:
             debug('i', "Winner {} is '{}' with {} number of tags.".format(winner_count, winner, winner_tags_count))
