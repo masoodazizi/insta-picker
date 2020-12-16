@@ -99,6 +99,16 @@ def get_followers_list(L, profile_name):
         followers_list.append(follower.username)
     return followers_list
 
+def get_followers_list_from_file():
+    with open("{}-followers-list.csv".format(profile_name)) as f:
+        followers_list = f.read().splitlines()
+    return followers_list
+
+def save_followers_list(followers_list):
+    with open("{}-followers-list.csv".format(profile_name), 'w') as f:
+        for follower in followers_list:
+            f.write("%s\n" % follower)
+
 def get_likes_list(post):
     debug(msg="Listing the users clicked LIKE for the post")
     likes_list = []
@@ -197,7 +207,7 @@ def winner_picker(candidates_list, weights_list, tags_count_list, total_winner):
             print("*"*100)
             print("||||||||||  {}  ||||||||||".format(winner).center(100,"*"))
             print("*"*100)
-            print("*"*100)
+            print("((((( Tagged {} Persons )))))".format(winner_tags_count).center(100,"*"))
             print(str(winner_count)*100)
         else:
             debug('i', "Winner {} is '{}' with {} number of tags.".format(winner_count, winner, winner_tags_count))
@@ -220,6 +230,12 @@ def main():
     ### username/password or anonymous
     login = login_insta(username)
 
+    ### Use this option to first fetch the list of the followers in a file,
+    ### then execute the program to pick the winner!
+    ### when the number of followers are high, it avoids lenghty execution.
+    # followers_list = get_followers_list(login, profile_name)
+    # save_followers_list(followers_list)
+
     if not debug_mode:
         init_text()
 
@@ -228,7 +244,8 @@ def main():
     commenters_list = process_comments(post, deadline, tz_name)
 
     if condition_is_follower:
-        followers_list = get_followers_list(login, profile_name)
+        # followers_list = get_followers_list(login, profile_name)
+        followers_list = get_followers_list_from_file()
         verify_followers(commenters_list,followers_list)
 
     if condition_liked_post:
