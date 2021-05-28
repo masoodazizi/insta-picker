@@ -131,3 +131,5 @@ dmypy.json
 # Custom ignore files/patterns
 .tags
 .idea
+config.py.mine
+config.py.orig

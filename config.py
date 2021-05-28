@@ -14,13 +14,14 @@ total_winner = 1
 
 condition_is_follower = False
 condition_liked_post  = True
+condition_only_likes  = False
 
-# Exclude users such as owners
+# Exclude Instagram profiles such as owners
 exclude_list = []
 
 deadline_dict = {
-    'year' : 2020,
-    'month' : 10,
+    'year' : 2021,
+    'month' : 05,
     'day' : 28,
     'hour' : 6,
     'minute' : 0

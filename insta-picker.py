@@ -206,7 +206,9 @@ def winner_picker(candidates_list, weights_list, tags_count_list, total_winner):
     for winner_cnt, winner in enumerate(winners_list):
         winner_count = winner_cnt + 1
         index = candidates_list.index(winner)
-        winner_tags_count = tags_count_list[index]
+        winner_tags_count = 0
+        if tags_count_list:
+            winner_tags_count = tags_count_list[index]
         if not debug_mode:
             print("\n\n\n\n\n")
             print("  THE ----------  {}  ---------- WINNER  ".format(winner_count).center(100,"="))
@@ -240,6 +242,7 @@ def main():
 
     ### Login to instagram with only username (and interactive password) or
     ### username/password or anonymous
+    # login = login_insta(username, password)
     login = login_insta(username)
 
     ### Use this option to first fetch the list of the followers in a file,
@@ -254,7 +257,6 @@ def main():
     post = fetch_post(login, post_id)
 
     commenters_list = process_comments(post, deadline, tz_name)
-
     if condition_is_follower:
         # followers_list = get_followers_list(login, profile_name)
         followers_list = get_followers_list_from_file()
@@ -264,12 +266,14 @@ def main():
         liker_list = get_likes_list(post)
         verify_likers(commenters_list,liker_list)
 
-    candidates_list, weights_list, tags_count_list = init_candidates(commenters_list)
-
-    winner_picker(candidates_list, weights_list, tags_count_list, total_winner)
+    if condition_only_likes:
+        winner_picker(liker_list, weights_list=None, tags_count_list=[], total_winner=total_winner)
+    else:
+        candidates_list, weights_list, tags_count_list = init_candidates(commenters_list)
+        winner_picker(candidates_list, weights_list, tags_count_list, total_winner)
 
     # list_invalid_commenters(commenters_list)
-
+    #
     # list_valid_commenters(login, commenters_list)
 
 if __name__ == "__main__":
